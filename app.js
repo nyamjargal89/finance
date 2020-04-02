@@ -8,7 +8,12 @@ var uiController = (function() {
     inputValue: ".add__value",
     addBtn: ".add__btn",
     incomeList: ".income__list",
-    expenseList: ".expenses__list"
+    expenseList: ".expenses__list",
+
+    tusuvLabel: ".budget__value",
+    incomeLabel: ".budget__income--value",
+    expenseLabel: ".budget__expenses--value",
+    percentageLabel: ".budget__expenses--percentage"
   };
 
   return {
@@ -41,6 +46,14 @@ var uiController = (function() {
       // for (var i = 0; i < fieldsArr.length; i++) {
       //   fieldsArr[i].value = "";
       // }
+    },
+
+    tusviigUzuuleh: function(tusuv){
+        document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
+        document.querySelector(DOMstrings.incomeLabel).textContent = tusuv.totalInc;
+        document.querySelector(DOMstrings.expenseLabel).textContent = tusuv.totalExp;
+        if (tusuv.huvi )
+        document.querySelector(DOMstrings.percentageLabel).textContent = tusuv.huvi + '%';
     },
 
     addListItem: function(item, type) {
@@ -192,7 +205,7 @@ var appController = (function(uiController, financeController) {
       var tusuv = financeController.tusviigAvah();
 
       // 6. Төсвийн тооцоог дэлгэцэнд гаргана.
-      console.log(tusuv);
+      uiController.tusviigUzuuleh(tusuv);
     }
   };
 
