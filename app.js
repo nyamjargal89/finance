@@ -1,7 +1,5 @@
-   
-
 // Дэлгэцтэй ажиллах контроллер
-var uiController = (function() {
+var uiController = (function () {
   var DOMstrings = {
     inputType: ".add__type",
     inputDescription: ".add__description",
@@ -14,23 +12,63 @@ var uiController = (function() {
     incomeLabel: ".budget__income--value",
     expenseLabel: ".budget__expenses--value",
     percentageLabel: ".budget__expenses--percentage",
-    containerDiv: ".container"
+    containerDiv: ".container",
+    expensePercentageLabel: ".item__percentage",
+    dateLabel: ".budget__title--month",
   };
 
+  var nodeListForeach = function (list, callback) {
+    for (var i = 0; i < list.length; i++) {
+      callback(list[i], i);
+    }
+  };
+  var formatMoney = function (too, type) {
+    too = "" + too;
+    var x = too.split("").reverse().join("");
+    var y = "";
+    var count = 1;
+    for (var i = 0; i < x.length; i++) {
+      y = y + x[i];
+      if (count % 3 === 0) y = y + ",";
+      count++;
+    }
+    var z = y.split("").reverse().join("");
+    if (z[0] === ",") z = z.substr(1, z.length - 1);
+    if (type === "inc") z = "+ " + z;
+    else z = "- " + z;
+    return z;
+  };
   return {
-    getInput: function() {
+    displayDate: function () {
+      var unuudur = new Date();
+      document.querySelector(DOMstrings.dateLabel).textContent =
+        unuudur.getFullYear() + " оны " + unuudur.getMonth() + " сарын ";
+    },
+    getInput: function () {
       return {
         type: document.querySelector(DOMstrings.inputType).value, // exp, inc
         description: document.querySelector(DOMstrings.inputDescription).value,
-        value: parseInt(document.querySelector(DOMstrings.inputValue).value)
+        value: parseInt(document.querySelector(DOMstrings.inputValue).value),
       };
     },
 
-    getDOMstrings: function() {
+    displayPercentages: function (allPercentages) {
+      // Зарлагын NodeList ийг олох
+      // Node гэдэг нь ====  <button id = "" >click me</button> гэхчлэн
+      var elements = document.querySelectorAll(
+        DOMstrings.expensePercentageLabel
+      );
+      // Элемент болгоны хувьд зарлагын хувийг массиваас авч шивж оруулах
+      nodeListForeach(elements, function (el, index) {
+        el.textContent = allPercentages[index];
+      });
+    },
+
+    getDOMstrings: function () {
       return DOMstrings;
     },
 
-    clearFields: function() {
+    clearFields: function () {
       var fields = document.querySelectorAll(
         DOMstrings.inputDescription + ", " + DOMstrings.inputValue
       );
@@ -38,7 +76,7 @@ var uiController = (function() {
       // Convert List to Array
       var fieldsArr = Array.prototype.slice.call(fields);
 
-      fieldsArr.forEach(function(el, index, array) {
+      fieldsArr.forEach(function (el, index, array) {
         el.value = "";
       });
 
@@ -49,18 +87,31 @@ var uiController = (function() {
       // }
     },
 
-    tusviigUzuuleh: function(tusuv){
-        document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
-        document.querySelector(DOMstrings.incomeLabel).textContent = tusuv.totalInc;
-        document.querySelector(DOMstrings.expenseLabel).textContent = tusuv.totalExp;
-        if (tusuv.huvi )
-        document.querySelector(DOMstrings.percentageLabel).textContent = tusuv.huvi + '%';
+    tusviigUzuuleh: function (tusuv) {
+      var type;
+      if (tusuv.tusuv > 0) type = "inc";
+      else type = "exp";
+      document.querySelector(DOMstrings.tusuvLabel).textContent = formatMoney(
+        tusuv.tusuv,
+        type
+      );
+      document.querySelector(DOMstrings.incomeLabel).textContent = formatMoney(
+        tusuv.totalInc,
+        "inc"
+      );
+      document.querySelector(DOMstrings.expenseLabel).textContent = formatMoney(
+        tusuv.totalExp,
+        "exp"
+      );
+      if (tusuv.huvi)
+        document.querySelector(DOMstrings.percentageLabel).textContent =
+          tusuv.huvi + "%";
     },
-    deleteListItem: function(id){
+    deleteListItem: function (id) {
       var el = document.getElementById(id);
-      el.parentNode.removeChild(el);  
-    },  
-    addListItem: function(item, type) {
+      el.parentNode.removeChild(el);
+    },
+    addListItem: function (item, type) {
       // Орлого зарлагын элементийг агуулсан html -ийг бэлтгэнэ.
       var html, list;
       if (type === "inc") {
@@ -75,39 +126,43 @@ var uiController = (function() {
       // Тэр HTML дотроо орлого зарлагын утгуудыг REPLACE ашиглаж өөрчилж өгнө.
       html = html.replace("%id%", item.id);
       html = html.replace("$$DESCRIPTION$$", item.description);
-      html = html.replace("$$VALUE$$", item.value);
+      html = html.replace("$$VALUE$$", formatMoney(item.value, type));
 
       // Бэлтгэсэн HTML ээ DOM руу хийж өгнө.
       document.querySelector(list).insertAdjacentHTML("beforeend", html);
-    }
+    },
   };
 })();
 
-
-
-
-
-
-
 //  Санхүүтэй ажиллах контроллер
-var financeController = (function() {
+var financeController = (function () {
   // private data
-  var Income = function(id, description, value) {
+  var Income = function (id, description, value) {
     this.id = id;
     this.description = description;
     this.value = value;
   };
 
   // private data
-  var Expense = function(id, description, value) {
+  var Expense = function (id, description, value) {
     this.id = id;
     this.description = description;
     this.value = value;
+    this.percentage = -1;
   };
 
-  var calculateTotal = function(type) {
+  Expense.prototype.calcPercentage = function (totalIncome) {
+    if (totalIncome > 0)
+      this.percentage = Math.round((this.value / totalIncome) * 100);
+    else this.percentage = 0;
+  };
+  Expense.prototype.getPercentage = function () {
+    return this.percentage;
+  };
+
+  var calculateTotal = function (type) {
     var sum = 0;
-    data.items[type].forEach(function(el) {
+    data.items[type].forEach(function (el) {
       sum = sum + el.value;
     });
 
@@ -118,22 +173,21 @@ var financeController = (function() {
   var data = {
     items: {
       inc: [],
-      exp: []
+      exp: [],
     },
 
     totals: {
       inc: 0,
-      exp: 0
+      exp: 0,
     },
 
     tusuv: 0,
 
-    huvi: 0
+    huvi: 0,
   };
 
- 
   return {
-    tusuvTootsooloh: function() {
+    tusuvTootsooloh: function () {
       // Нийт орлогын нийлбэрийг тооцоолно.
       calculateTotal("inc");
 
@@ -144,29 +198,41 @@ var financeController = (function() {
       data.tusuv = data.totals.inc - data.totals.exp;
 
       // Орлого зарлагын хувийг тооцоолно.
-      data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+      if (data.totals.inc > 0)
+        data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+      else data.huvi = 0;
     },
-
-    tusviigAvah: function() {
+    calculatePercentages: function () {
+      data.items.exp.forEach(function (el) {
+        el.calcPercentage(data.totals.inc);
+      });
+    },
+    getPercentage: function () {
+      var allPercentages = data.items.exp.map(function (el) {
+        return el.getPercentage();
+      });
+      return allPercentages;
+    },
+    tusviigAvah: function () {
       return {
         tusuv: data.tusuv,
         huvi: data.huvi,
         totalInc: data.totals.inc,
-        totalExp: data.totals.exp
+        totalExp: data.totals.exp,
       };
     },
 
-    deleteItem: function(type, id){
-        var ids= data.items[type].map(function(el){
-           return el.id; 
-        });
-        var index = ids.indexOf(id);
-        if(index !==-1){
-          data.items[type].splice(index, 1);
-        }
+    deleteItem: function (type, id) {
+      var ids = data.items[type].map(function (el) {
+        return el.id;
+      });
+      var index = ids.indexOf(id);
+      if (index !== -1) {
+        data.items[type].splice(index, 1);
+      }
     },
 
-    addItem: function(type, desc, val) {
+    addItem: function (type, desc, val) {
       var item, id;
 
       if (data.items[type].length === 0) id = 1;
@@ -185,18 +251,15 @@ var financeController = (function() {
       return item;
     },
 
-    seeData: function() {
+    seeData: function () {
       return data;
-    }
+    },
   };
 })();
 
-
-
-
 //  Программын холбогч контроллер
-var appController = (function(uiController, financeController) {
-  var ctrlAddItem = function() {
+var appController = (function (uiController, financeController) {
+  var ctrlAddItem = function () {
     // 1. Оруулах өгөгдлийг дэлгэцээс олж авна.
     var input = uiController.getInput();
 
@@ -211,40 +274,46 @@ var appController = (function(uiController, financeController) {
       // 3. Олж авсан өгөгдлүүдээ вэб дээрээ тохирох хэсэгт нь гаргана.
       uiController.addListItem(item, input.type);
       uiController.clearFields();
-      
+
       // Төсвийг шинээр тооцоолоод дэлгэцэнд гаргана.
       updateTusuv();
-      
     }
   };
-    var updateTusuv = function(){
-      // 4. Төсвийг тооцоолно.
-      financeController.tusuvTootsooloh();
+  var updateTusuv = function () {
+    // 4. Төсвийг тооцоолно.
+    financeController.tusuvTootsooloh();
 
-      // 5. Эцсийн үлдэгдэл олох
-      var tusuv = financeController.tusviigAvah();
+    // 5. Эцсийн үлдэгдэл олох
+    var tusuv = financeController.tusviigAvah();
 
-      // 6. Төсвийн тооцоог дэлгэцэнд гаргана.
-      uiController.tusviigUzuuleh(tusuv);
-    }
-  
-  var setupEventListeners = function() {
+    // 6. Төсвийн тооцоог дэлгэцэнд гаргана.
+    uiController.tusviigUzuuleh(tusuv);
+    // 7. Элементүүдийн хувийг тооцоолно.
+    financeController.calculatePercentages();
+    // 8. Элементүүдийн хувийг хүлээж авна.
+    var allPercentages = financeController.getPercentage();
+    // 9. Эдгээр хувийг дэлгэцэнд гаргана.
+    uiController.displayPercentages(allPercentages);
+  };
+
+  var setupEventListeners = function () {
     var DOM = uiController.getDOMstrings();
 
-    document.querySelector(DOM.addBtn).addEventListener("click", function() {
+    document.querySelector(DOM.addBtn).addEventListener("click", function () {
       ctrlAddItem();
     });
 
-    document.addEventListener("keypress", function(event) {
+    document.addEventListener("keypress", function (event) {
       if (event.keyCode === 13 || event.which === 13) {
         ctrlAddItem();
       }
     });
-    document.querySelector(DOM.containerDiv).addEventListener('click', function(event){
-       
-        var id = (event.target.parentNode.parentNode.parentNode.parentNode.id);
-        if(id){
-          var arr = id.split('-');
+    document
+      .querySelector(DOM.containerDiv)
+      .addEventListener("click", function (event) {
+        var id = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        if (id) {
+          var arr = id.split("-");
           var type = arr[0];
           var itemId = parseInt(arr[1]);
           // console.log(type + "===>" + itemId);
@@ -256,17 +325,16 @@ var appController = (function(uiController, financeController) {
           // 3. Үлдэгдэл тооцоог шинэчилж харуулна.
           // Төсвийг шинээр тооцоолоод дэлгэцэнд гаргана.
           updateTusuv();
-          
         }
-        
-    });
+      });
   };
 
   return {
-    init: function() {
+    init: function () {
       console.log("Application started...");
+      uiController.displayDate();
       setupEventListeners();
-    }
+    },
   };
 })(uiController, financeController);
 
